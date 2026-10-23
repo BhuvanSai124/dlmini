@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}Project Documentation | SentimentAI{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1">Academic Project Documentation</h3>
+    <p class="text-muted mb-0">
+      Deep Learning Mini Project Technical Report &amp; Faculty Evaluation Guide
+    </p>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Table of Contents Sidebar -->
+  <div class="col-lg-3">
+    <div class="custom-card sticky-top" style="top: 80px;">
+      <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">Contents</h6>
+      <nav class="nav nav-pills flex-column small">
+        <a class="nav-link text-secondary py-1" href="#sec-abstract">1. Abstract &amp; Problem</a>
+        <a class="nav-link text-secondary py-1" href="#sec-arch">2. Model Architectures</a>
+        <a class="nav-link text-secondary py-1" href="#sec-math">3. Mathematical Derivations</a>
+        <a class="nav-link text-secondary py-1" href="#sec-nlp">4. NLP Preprocessing</a>
+        <a class="nav-link text-secondary py-1" href="#sec-dataset">5. IMDB Dataset</a>
+        <a class="nav-link text-secondary py-1" href="#sec-dependency">6. Long-Term Dependency</a>
+        <a class="nav-link text-secondary py-1" href="#sec-viva">7. Faculty Viva Questions</a>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Main Report Body -->
+  <div class="col-lg-9">
+    <!-- Section 1 -->
+    <div class="custom-card mb-4" id="sec-abstract">
+      <h4 class="fw-bold text-primary mb-3">1. Abstract &amp; Problem Statement</h4>
+      <p class="text-secondary small">
+        <strong>Problem Statement:</strong> <em>"Sentiment Analysis using RNN/LSTM: Implement an RNN and an LSTM on a text sequence dataset; compare their ability to capture long-term dependencies."</em>
+      </p>
+      <p class="text-secondary small">
+        This research implements an end-to-end deep learning framework designed to investigate the fundamental operational trade-offs between standard First-Order Recurrent Neural Networks (Simple RNN) and Gated Memory Networks (LSTM) in binary sentiment classification. 
+        Using 50,000 polar reviews from the benchmark IMDB corpus, both models are trained under identical tokenization, sequence lengths, and hyperparameters to evaluate test accuracy, precision, recall, ROC-AUC, training throughput, and distance-decay vulnerability.
+      </p>
+    </div>
+
+    <!-- Section 2 -->
+    <div class="custom-card mb-4" id="sec-arch">
+      <h4 class="fw-bold text-primary mb-3">2. System &amp; Model Architectures</h4>
+      <div class="p-3 bg-light border rounded small mb-3">
+        <h6 class="fw-bold text-dark">Identical Architecture Topology:</h6>
+        <code>Input Sequence (None, 250) &rarr; Embedding Layer (10000, 64) &rarr; Recurrent Layer (64 units) &rarr; Dropout (0.3) &rarr; Dense (32, ReLU) &rarr; Output Dense (1, Sigmoid)</code>
+      </div>
+      <p class="text-secondary small">
+        To isolate the recurrent mechanism as the sole independent variable, both the Simple RNN and LSTM models employ the exact same embedding dimensionality (64), hidden capacity (64 units), dropout probability (0.3), dense projection (32 units), Adam optimizer (\(\alpha = 0.001\)), and binary crossentropy loss.
+      </p>
+    </div>
+
+    <!-- Section 3 -->
+    <div class="custom-card mb-4" id="sec-math">
+      <h4 class="fw-bold text-primary mb-3">3. Mathematical Derivations: Vanishing Gradient vs. CEC</h4>
+      <div class="row g-3 small">
+        <div class="col-md-6 border-end">
+          <h6 class="fw-bold text-dark">Simple RNN: Backpropagation Through Time (BPTT)</h6>
+          <p class="text-secondary">
+            Let the recurrence equation be:
+          </p>
+          <div class="p-2 bg-light border rounded font-monospace text-center mb-2">
+            h_t = \tanh(W_{hh} h_{t-1} + W_{xh} x_t + b_h)
+          </div>
+          <p class="text-secondary">
+            The gradient of the final loss \( L \) with respect to the initial hidden state \( h_1 \) expands via the chain rule as a product of Jacobian matrices:
+          </p>
+          <div class="p-2 bg-light border rounded font-monospace text-center mb-2">
+            \frac{\partial L}{\partial h_1} = \frac{\partial L}{\partial h_T} \prod_{k=2}^T \frac{\partial h_k}{\partial h_{k-1}}
+          </div>
+          <p class="text-secondary">
+            Since \( \frac{\partial h_k}{\partial h_{k-1}} = \text{diag}(1 - h_k^2) W_{hh}^T \), and \( \tanh'(z) \in (0, 1] \), as sequence length \( T \) grows, the repeated matrix product causes the gradient to decay exponentially towards zero (\( \lambda_{\max}(W_{hh}) < 1 \)). Consequently, weight updates reflect only the most recent tokens.
+          </p>
+        </div>
+
+        <div class="col-md-6">
+          <h6 class="fw-bold text-dark">LSTM: Constant Error Carousel (CEC)</h6>
+          <p class="text-secondary">
+            Hochreiter &amp; Schmidhuber (1997) resolved this by introducing the additive cell state \( C_t \):
+          </p>
+          <div class="p-2 bg-light border rounded font-monospace text-center mb-2">
+            C_t = f_t \odot C_{t-1} + i_t \odot \tilde{C}_t
+          </div>
+          <p class="text-secondary">
+            The gradient flow directly along the cell state is:
+          </p>
+          <div class="p-2 bg-light border rounded font-monospace text-center mb-2">
+            \frac{\partial C_t}{\partial C_{t-1}} = f_t
+          </div>
+          <p class="text-secondary">
+            When the forget gate \( f_t \approx 1 \), the error propagates through arbitrary temporal intervals without exponential attenuation, creating a constant error conveyor belt that prevents vanishing gradients.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 4 -->
+    <div class="custom-card mb-4" id="sec-nlp">
+      <h4 class="fw-bold text-primary mb-3">4. NLP Preprocessing &amp; The Negation Rule</h4>
+      <p class="text-secondary small">
+        Standard NLP pipelines frequently apply blanket stopword deletion, inadvertently removing critical polarity modifiers such as <code>not</code>, <code>no</code>, <code>never</code>, <code>neither</code>, <code>hardly</code>, and <code>cannot</code>. 
+        In our pipeline, an explicit whitelist preserves all negation tokens. Words are transformed through lowercase conversion, HTML tag removal, regex contraction expansion (e.g. <code>"can't"</code> &rarr; <code>"can not"</code>), whitespace normalization, training-only vocabulary fitting, and post-padding to 250 tokens.
+      </p>
+    </div>
+
+    <!-- Section 5 -->
+    <div class="custom-card mb-4" id="sec-dataset">
+      <h4 class="fw-bold text-primary mb-3">5. IMDB Dataset Configuration</h4>
+      <div class="table-responsive small">
+        <table class="table table-bordered mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Property</th>
+              <th>Specification</th>
+              <th>Academic Rationale</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Total Samples</td>
+              <td>50,000 Movie Reviews</td>
+              <td>Standard NLP benchmark corpus (Maas et al.)</td>
+            </tr>
+            <tr>
+              <td>Partitions</td>
+              <td>Train: 20,000 &bull; Val: 5,000 &bull; Test: 25,000</td>
+              <td>50% held-out test guarantees genuine generalization evaluation</td>
+            </tr>
+            <tr>
+              <td>Class Balance</td>
+              <td>25,000 Positive (50%) &bull; 25,000 Negative (50%)</td>
+              <td>Eliminates class imbalance bias; accuracy matches macro-F1</td>
+            </tr>
+            <tr>
+              <td>Dual Data Source</td>
+              <td>Option 1: TensorFlow Keras &bull; Option 2: Local CSV</td>
+              <td>Ensures offline reproducibility without external download hurdles</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Section 6 -->
+    <div class="custom-card mb-4" id="sec-dependency">
+      <h4 class="fw-bold text-primary mb-3">6. Controlled Long-Term Dependency Experiments</h4>
+      <p class="text-secondary small">
+        Rather than relying solely on global test set accuracy, the study executes 5 controlled probe suites:
+      </p>
+      <ol class="small text-secondary">
+        <li><strong>Sequence Length Scaling:</strong> Evaluates accuracy and training latency across 50, 100, 250, and 500 token thresholds.</li>
+        <li><strong>Early Sentiment Probes:</strong> Sentiment markers located at indices 1-5 followed by 25+ neutral words to measure backward gradient preservation.</li>
+        <li><strong>Late Sentiment Probes:</strong> Sentiment markers placed at the end to confirm short-term recency bias.</li>
+        <li><strong>Long-Distance Negation:</strong> Measures the model's capability to invert sentiment when "not" is separated from "good" by up to 20 tokens.</li>
+        <li><strong>Distance Gap Scan:</strong> Parametrically increases filler words from 1 to 25 to graph the degradation boundary.</li>
+      </ol>
+    </div>
+
+    <!-- Section 7 -->
+    <div class="custom-card border-start border-4 border-success" id="sec-viva">
+      <h4 class="fw-bold text-success mb-3">7. Faculty Viva &amp; Oral Examination Preparation</h4>
+      <div class="accordion accordion-flush small" id="accordionViva">
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#q1">
+              Q1: Why does Simple RNN fail to retain long-term dependencies?
+            </button>
+          </h2>
+          <div id="q1" class="accordion-collapse collapse" data-bs-parent="#accordionViva">
+            <div class="accordion-body text-secondary">
+              Due to Backpropagation Through Time (BPTT). The continuous multiplication of the recurrent weight matrix \( W_{hh} \) over \( T \) time steps causes the error gradient to vanish exponentially if \( \lambda_{\max}(W_{hh}) < 1 \), or explode if \( > 1 \). In practice, early tokens exert near-zero influence on the final hidden state after 10-20 steps.
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#q2">
+              Q2: How does LSTM overcome the vanishing gradient?
+            </button>
+          </h2>
+          <div id="q2" class="accordion-collapse collapse" data-bs-parent="#accordionViva">
+            <div class="accordion-body text-secondary">
+              Through its additive Cell State (\( C_t \)) and Forget Gate (\( f_t \)). Because updates to the cell state are additive (\( C_t = f_t \odot C_{t-1} + i_t \odot \tilde{C}_t \)), the partial derivative \( \frac{\partial C_t}{\partial C_{t-1}} = f_t \). When \( f_t \approx 1 \), gradients traverse the Constant Error Carousel with no exponential decay factor.
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#q3">
+              Q3: If LSTM is better at long dependencies, why ever use Simple RNN?
+            </button>
+          </h2>
+          <div id="q3" class="accordion-collapse collapse" data-bs-parent="#accordionViva">
+            <div class="accordion-body text-secondary">
+              Computational complexity and memory footprint. Simple RNN has 1 hidden state matrix computation per step, whereas LSTM has 4 (Forget, Input, Candidate, Output gates), requiring ~4x more FLOPs and weights. For short sequences or edge devices where latency and RAM are constrained, Simple RNN is significantly faster.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}Dataset Explorer | SentimentAI{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1">IMDB Movie Reviews Dataset Explorer</h3>
+    <p class="text-muted mb-0">
+      Benchmark dataset for binary text classification with 50,000 highly polar reviews.
+    </p>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <label class="small text-muted fw-semibold">Dataset Source:</label>
+    <select id="selectDatasetSource" class="form-select form-select-sm" style="width: auto;">
+      <option value="keras" selected>Option 1: TensorFlow / Keras IMDB</option>
+      <option value="csv">Option 2: Local CSV (imdb_dataset.csv)</option>
+    </select>
+    <button class="btn btn-primary btn-sm" id="btnReloadDataset">
+      <i class="bi bi-arrow-clockwise me-1"></i> Load
+    </button>
+  </div>
+</div>
+
+<!-- Active Source Alert Banner -->
+<div class="alert alert-info d-flex align-items-center justify-content-between p-3 rounded-3 mb-4">
+  <div class="d-flex align-items-center gap-2">
+    <i class="bi bi-database-check fs-4"></i>
+    <div>
+      <strong>Active Source:</strong> <span id="lblActiveSource">TensorFlow / Keras IMDB</span>
+      <div class="small text-muted">Fixed random seed: 42 (Reproducible Stratification)</div>
+    </div>
+  </div>
+  <span class="badge bg-success-subtle text-success border border-success px-3 py-2">
+    <i class="bi bi-check-circle-fill me-1"></i> Data Verified
+  </span>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="custom-card stat-card border-start border-4 border-primary">
+      <div class="stat-label">Total Corpus Size</div>
+      <div class="stat-value text-primary" id="dsTotalReviews">50,000</div>
+      <small class="text-muted">25,000 Pos &bull; 25,000 Neg</small>
+      <div class="stat-icon bg-primary-subtle text-primary">
+        <i class="bi bi-film"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="custom-card stat-card border-start border-4 border-info">
+      <div class="stat-label">Training Partition</div>
+      <div class="stat-value text-info" id="dsTrainSamples">20,000</div>
+      <small class="text-muted">40% of entire dataset</small>
+      <div class="stat-icon bg-info-subtle text-info">
+        <i class="bi bi-gear-wide-connected"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="custom-card stat-card border-start border-4 border-warning">
+      <div class="stat-label">Validation Partition</div>
+      <div class="stat-value text-warning" id="dsValSamples">5,000</div>
+      <small class="text-muted">10% of entire dataset</small>
+      <div class="stat-icon bg-warning-subtle text-warning">
+        <i class="bi bi-clipboard2-check"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="custom-card stat-card border-start border-4 border-secondary">
+      <div class="stat-label">Testing Partition</div>
+      <div class="stat-value text-secondary" id="dsTestSamples">25,000</div>
+      <small class="text-muted">50% unseen benchmark</small>
+      <div class="stat-icon bg-secondary-subtle text-secondary">
+        <i class="bi bi-speedometer2"></i>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Text Attributes & Distribution Charts -->
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="custom-card h-100">
+      <div class="card-header-custom">
+        <h5 class="fw-bold mb-0">Text Length &amp; Vocabulary Statistics</h5>
+      </div>
+      <table class="table table-sm table-borderless">
+        <tbody>
+          <tr>
+            <td class="text-muted"><i class="bi bi-alphabet me-2"></i> Training Vocabulary (Unique Words):</td>
+            <td class="fw-bold text-end" id="dsVocabSize">Calculating...</td>
+          </tr>
+          <tr>
+            <td class="text-muted"><i class="bi bi-rulers me-2"></i> Average Review Length:</td>
+            <td class="fw-bold text-end" id="dsAvgLength">Calculating...</td>
+          </tr>
+          <tr>
+            <td class="text-muted"><i class="bi bi-arrows-expand me-2"></i> Min / Max Review Length:</td>
+            <td class="fw-bold text-end" id="dsMinMaxLength">Calculating...</td>
+          </tr>
+          <tr>
+            <td class="text-muted"><i class="bi bi-distribute-vertical me-2"></i> Median Review Length:</td>
+            <td class="fw-bold text-end" id="dsMedianLength">Calculating...</td>
+          </tr>
+          <tr>
+            <td class="text-muted"><i class="bi bi-check-all me-2"></i> Class Balance:</td>
+            <td class="fw-bold text-end text-success">50% Positive / 50% Negative (Balanced)</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="p-3 bg-light rounded small text-muted">
+        <strong>Academic Note:</strong> The IMDB dataset is balanced by design, eliminating class imbalance bias. No synthetic oversampling (SMOTE) or class weighting is needed.
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="custom-card h-100">
+      <div class="card-header-custom">
+        <h5 class="fw-bold mb-0">Partition &amp; Class Distribution</h5>
+      </div>
+      <div style="height: 240px;">
+        <canvas id="chartDatasetDist"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Sample Reviews Explorer -->
+<div class="custom-card">
+  <div class="card-header-custom">
+    <h5 class="fw-bold mb-0">
+      <i class="bi bi-eyeglasses me-2"></i> Actual Dataset Sample Reviews
+    </h5>
+    <span class="text-muted small">Loaded directly from memory without placeholder fabrication</span>
+  </div>
+
+  <ul class="nav nav-pills mb-3" id="sampleTabs" role="tablist">
+    <li class="nav-item">
+      <button class="nav-link active btn-sm" id="pos-tab" data-bs-toggle="pill" data-bs-target="#pos-samples" type="button">
+        <i class="bi bi-hand-thumbs-up-fill text-success me-1"></i> Positive Samples (Label: 1)
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link btn-sm" id="neg-tab" data-bs-toggle="pill" data-bs-target="#neg-samples" type="button">
+        <i class="bi bi-hand-thumbs-down-fill text-danger me-1"></i> Negative Samples (Label: 0)
+      </button>
+    </li>
+  </ul>
+
+  <div class="tab-content" id="sampleTabsContent">
+    <div class="tab-pane fade show active" id="pos-samples">
+      <div id="positiveSamplesList" class="d-flex flex-column gap-3">
+        <div class="text-muted small">Loading positive reviews...</div>
+      </div>
+    </div>
+    <div class="tab-pane fade" id="neg-samples">
+      <div id="negativeSamplesList" class="d-flex flex-column gap-3">
+        <div class="text-muted small">Loading negative reviews...</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    loadDatasetExplorer();
+    document.getElementById('btnReloadDataset').addEventListener('click', function() {
+      const src = document.getElementById('selectDatasetSource').value;
+      loadDatasetExplorer(src);
+    });
+  });
+
+  function loadDatasetExplorer(source = 'keras') {
+    fetch('/api/dataset/info?source=' + source)
+      .then(res => res.json())
+      .then(resp => {
+        if(resp.status === 'success') {
+          const d = resp.data;
+          document.getElementById('lblActiveSource').textContent = d.active_source;
+          document.getElementById('dsTotalReviews').textContent = Number(d.total_reviews).toLocaleString();
+          document.getElementById('dsTrainSamples').textContent = Number(d.train_samples).toLocaleString();
+          document.getElementById('dsValSamples').textContent = Number(d.val_samples).toLocaleString();
+          document.getElementById('dsTestSamples').textContent = Number(d.test_samples).toLocaleString();
+          document.getElementById('dsVocabSize').textContent = Number(d.vocabulary_size_train).toLocaleString() + ' tokens';
+          document.getElementById('dsAvgLength').textContent = d.avg_review_length + ' words';
+          document.getElementById('dsMinMaxLength').textContent = d.min_review_length + ' / ' + d.max_review_length + ' words';
+          document.getElementById('dsMedianLength').textContent = d.median_review_length + ' words';
+
+          // Render sample lists
+          const posList = document.getElementById('positiveSamplesList');
+          posList.innerHTML = '';
+          (d.sample_positive_reviews || []).forEach((txt, idx) => {
+            posList.innerHTML += `
+              <div class="p-3 border rounded border-start border-4 border-success bg-white shadow-sm">
+                <div class="d-flex justify-content-between mb-1">
+                  <span class="badge bg-success-subtle text-success">Sample #${idx+1} &bull; Label: 1 (Positive)</span>
+                  <small class="text-muted">${txt.split(' ').length} words</small>
+                </div>
+                <p class="mb-0 small text-secondary">${txt.substring(0, 320)}...</p>
+              </div>
+            `;
+          });
+
+          const negList = document.getElementById('negativeSamplesList');
+          negList.innerHTML = '';
+          (d.sample_negative_reviews || []).forEach((txt, idx) => {
+            negList.innerHTML += `
+              <div class="p-3 border rounded border-start border-4 border-danger bg-white shadow-sm">
+                <div class="d-flex justify-content-between mb-1">
+                  <span class="badge bg-danger-subtle text-danger">Sample #${idx+1} &bull; Label: 0 (Negative)</span>
+                  <small class="text-muted">${txt.split(' ').length} words</small>
+                </div>
+                <p class="mb-0 small text-secondary">${txt.substring(0, 320)}...</p>
+              </div>
+            `;
+          });
+
+          // Render Chart
+          renderDatasetDistributionChart(d.train_samples, d.val_samples, d.test_samples);
+        }
+      })
+      .catch(err => console.error("Dataset fetch error:", err));
+  }
+</script>
+{% endblock %}

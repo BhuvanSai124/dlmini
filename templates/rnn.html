@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+
+{% block title %}Simple RNN Model | SentimentAI{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1">Simple Recurrent Neural Network (Simple RNN)</h3>
+    <p class="text-muted mb-0">
+      Classic Elman architecture featuring recurrent hidden state updates with \( \tanh \) non-linearity.
+    </p>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <span class="badge bg-primary-subtle text-primary border border-primary px-3 py-2" id="badgeRnnStatus">
+      Checking model status...
+    </span>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- Left Column: Training Controls & Hyperparameters -->
+  <div class="col-lg-5">
+    <div class="custom-card h-100">
+      <div class="card-header-custom">
+        <h5 class="fw-bold mb-0 text-primary">
+          <i class="bi bi-sliders me-2"></i> Hyperparameter Configuration
+        </h5>
+        <small class="text-muted">Academic Standards</small>
+      </div>
+
+      <form id="formTrainRnn">
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Epochs:</label>
+            <input type="number" class="form-control form-control-sm" id="rnnEpochs" value="5" min="1" max="50">
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Batch Size:</label>
+            <input type="number" class="form-control form-control-sm" id="rnnBatchSize" value="64" min="16" max="256" step="16">
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Learning Rate:</label>
+            <input type="number" class="form-control form-control-sm" id="rnnLR" value="0.001" step="0.0005">
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Sequence Length:</label>
+            <select class="form-select form-select-sm" id="rnnSeqLen">
+              <option value="50">50 tokens</option>
+              <option value="100">100 tokens</option>
+              <option value="250" selected>250 tokens (Default)</option>
+              <option value="500">500 tokens</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Embedding Dim:</label>
+            <input type="number" class="form-control form-control-sm" id="rnnEmbedDim" value="64" min="16" max="256">
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">SimpleRNN Units:</label>
+            <input type="number" class="form-control form-control-sm" id="rnnUnits" value="64" min="16" max="256">
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Dense Units (ReLU):</label>
+            <input type="number" class="form-control form-control-sm" id="rnnDenseUnits" value="32" min="8" max="128">
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Dropout Rate:</label>
+            <input type="number" class="form-control form-control-sm" id="rnnDropout" value="0.3" min="0.0" max="0.7" step="0.1">
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Dataset Source:</label>
+          <select class="form-select form-select-sm" id="rnnDatasetSource">
+            <option value="keras" selected>Option 1: TensorFlow Keras IMDB</option>
+            <option value="csv">Option 2: Local CSV (imdb_dataset.csv)</option>
+          </select>
+        </div>
+
+        <div class="d-grid gap-2">
+          <button type="submit" class="btn btn-primary" id="btnStartRnnTrain">
+            <i class="bi bi-play-circle-fill me-1"></i> Start Simple RNN Training
+          </button>
+        </div>
+      </form>
+
+      <!-- Live Training Progress Bar -->
+      <div id="rnnProgressBox" class="mt-4 p-3 border rounded bg-light d-none">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <strong class="small" id="rnnProgressTitle">Training in Progress...</strong>
+          <span class="badge bg-primary" id="rnnProgressPct">0%</span>
+        </div>
+        <div class="progress mb-2" style="height: 10px;">
+          <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" id="rnnProgressBar" style="width: 0%;"></div>
+        </div>
+        <p class="small text-muted mb-0" id="rnnProgressMsg">Preparing dataset...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column: Model Architecture & Layer Parameters -->
+  <div class="col-lg-7">
+    <div class="custom-card h-100">
+      <div class="card-header-custom">
+        <h5 class="fw-bold mb-0">
+          <i class="bi bi-layers-fill me-2 text-primary"></i> Neural Architecture &amp; Layer Specification
+        </h5>
+        <span class="badge bg-light text-dark border">Param Total: ~646,305</span>
+      </div>
+
+      <div class="table-responsive mb-3">
+        <table class="table table-sm table-bordered align-middle small mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Layer #</th>
+              <th>Layer Name</th>
+              <th>Type</th>
+              <th>Output Shape</th>
+              <th>Activation</th>
+              <th>Parameters</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td><code>input_sequence</code></td>
+              <td>InputLayer</td>
+              <td>(None, 250)</td>
+              <td>None</td>
+              <td>0</td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td><code>word_embedding</code></td>
+              <td>Embedding</td>
+              <td>(None, 250, 64)</td>
+              <td>None</td>
+              <td>640,000</td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td><code>simple_rnn_layer</code></td>
+              <td>SimpleRNN</td>
+              <td>(None, 64)</td>
+              <td>tanh</td>
+              <td>8,256</td>
+            </tr>
+            <tr>
+              <td>4</td>
+              <td><code>rnn_dropout</code></td>
+              <td>Dropout (0.3)</td>
+              <td>(None, 64)</td>
+              <td>None</td>
+              <td>0</td>
+            </tr>
+            <tr>
+              <td>5</td>
+              <td><code>dense_features</code></td>
+              <td>Dense</td>
+              <td>(None, 32)</td>
+              <td>ReLU</td>
+              <td>2,080</td>
+            </tr>
+            <tr>
+              <td>6</td>
+              <td><code>sentiment_output</code></td>
+              <td>Dense</td>
+              <td>(None, 1)</td>
+              <td>Sigmoid</td>
+              <td>33</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="p-3 border rounded bg-light small">
+        <h6 class="fw-bold text-dark mb-1">Recurrent Mathematical Formulation:</h6>
+        <p class="mb-1 font-monospace text-secondary">
+          h_t = tanh(W_xh &bull; x_t + W_hh &bull; h_{t-1} + b_h)
+        </p>
+        <span class="text-muted">
+          Because \( W_{hh} \) is multiplied recursively \( T \) times during Backpropagation Through Time (BPTT), 
+          gradients scale as \( (W_{hh})^T \), triggering exponential gradient decay for distant word dependencies.
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Training Curves Section -->
+<div class="row g-4">
+  <div class="col-md-6">
+    <div class="custom-card">
+      <div class="card-header-custom">
+        <h5 class="fw-bold mb-0">Training &amp; Validation Accuracy</h5>
+      </div>
+      <div style="height: 280px;">
+        <canvas id="chartRnnAccuracy"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="custom-card">
+      <div class="card-header-custom">
+        <h5 class="fw-bold mb-0">Training &amp; Validation Loss</h5>
+      </div>
+      <div style="height: 280px;">
+        <canvas id="chartRnnLoss"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+  let rnnPoller = null;
+
+  document.addEventListener('DOMContentLoaded', function() {
+    checkRnnStatus();
+    loadRnnHistoryCharts();
+
+    document.getElementById('formTrainRnn').addEventListener('submit', function(e) {
+      e.preventDefault();
+      startRnnTraining();
+    });
+  });
+
+  function checkRnnStatus() {
+    fetch('/api/models/status')
+      .then(res => res.json())
+      .then(data => {
+        const rnn = data.rnn;
+        const badge = document.getElementById('badgeRnnStatus');
+        if (rnn.trained) {
+          badge.className = 'badge bg-success-subtle text-success border border-success px-3 py-2';
+          badge.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Model Weights Saved &amp; Ready';
+        } else {
+          badge.className = 'badge bg-warning-subtle text-warning border border-warning px-3 py-2';
+          badge.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> Not Trained Yet';
+        }
+
+        if (data.active_training.status === 'training' && data.active_training.model_type === 'rnn') {
+          showProgressBox(data.active_training);
+          startPollingRnn();
+        }
+      });
+  }
+
+  function startRnnTraining() {
+    const payload = {
+      epochs: parseInt(document.getElementById('rnnEpochs').value),
+      batch_size: parseInt(document.getElementById('rnnBatchSize').value),
+      learning_rate: parseFloat(document.getElementById('rnnLR').value),
+      sequence_length: parseInt(document.getElementById('rnnSeqLen').value),
+      embedding_dim: parseInt(document.getElementById('rnnEmbedDim').value),
+      hidden_units: parseInt(document.getElementById('rnnUnits').value),
+      dense_units: parseInt(document.getElementById('rnnDenseUnits').value),
+      dropout_rate: parseFloat(document.getElementById('rnnDropout').value),
+      dataset_source: document.getElementById('rnnDatasetSource').value
+    };
+
+    fetch('/api/train/rnn', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(resp => {
+      if (resp.status === 'accepted') {
+        document.getElementById('btnStartRnnTrain').disabled = true;
+        document.getElementById('rnnProgressBox').classList.remove('d-none');
+        startPollingRnn();
+      } else {
+        alert(resp.message || "Failed to start training.");
+      }
+    })
+    .catch(err => alert("Training request error: " + err));
+  }
+
+  function startPollingRnn() {
+    if (rnnPoller) clearInterval(rnnPoller);
+    rnnPoller = setInterval(() => {
+      fetch('/api/train/status')
+        .then(res => res.json())
+        .then(resp => {
+          const d = resp.data;
+          showProgressBox(d);
+          if (d.status === 'completed' || d.status === 'error' || d.status === 'idle') {
+            clearInterval(rnnPoller);
+            document.getElementById('btnStartRnnTrain').disabled = false;
+            checkRnnStatus();
+            loadRnnHistoryCharts();
+          }
+        });
+    }, 1500);
+  }
+
+  function showProgressBox(d) {
+    const box = document.getElementById('rnnProgressBox');
+    box.classList.remove('d-none');
+    document.getElementById('rnnProgressBar').style.width = d.progress_pct + '%';
+    document.getElementById('rnnProgressPct').textContent = d.progress_pct + '%';
+    document.getElementById('rnnProgressTitle').textContent = `Epoch ${d.current_epoch}/${d.total_epochs}`;
+    document.getElementById('rnnProgressMsg').textContent = d.message;
+  }
+
+  function loadRnnHistoryCharts() {
+    fetch('/api/training/history')
+      .then(res => res.json())
+      .then(resp => {
+        if (resp.data.rnn) {
+          renderModelHistoryCharts('Rnn', resp.data.rnn);
+        }
+      });
+  }
+</script>
+{% endblock %}

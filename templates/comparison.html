@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block title %}Model Comparison | SentimentAI{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1">Architectural Comparison: Simple RNN vs. LSTM</h3>
+    <p class="text-muted mb-0">
+      Head-to-head empirical benchmarking on 25,000 unseen test reviews under identical preprocessing conditions.
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-primary btn-sm" id="btnRefreshComparison">
+      <i class="bi bi-arrow-clockwise me-1"></i> Refresh Comparison
+    </button>
+  </div>
+</div>
+
+<!-- Comparison Summary Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="custom-card stat-card border-start border-4 border-primary">
+      <div class="stat-label">RNN Accuracy</div>
+      <div class="stat-value text-primary" id="cmpRnnAcc">--</div>
+      <small class="text-muted" id="cmpRnnF1">F1: --</small>
+      <div class="stat-icon bg-primary-subtle text-primary">
+        <i class="bi bi-arrow-repeat"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="custom-card stat-card border-start border-4 border-secondary">
+      <div class="stat-label">LSTM Accuracy</div>
+      <div class="stat-value text-secondary" id="cmpLstmAcc">--</div>
+      <small class="text-muted" id="cmpLstmF1">F1: --</small>
+      <div class="stat-icon bg-secondary-subtle text-secondary">
+        <i class="bi bi-memory"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="custom-card stat-card border-start border-4 border-info">
+      <div class="stat-label">Accuracy Delta (&Delta;)</div>
+      <div class="stat-value text-info" id="cmpAccDelta">--</div>
+      <small class="text-muted" id="cmpAccWinner">Leader: Pending</small>
+      <div class="stat-icon bg-info-subtle text-info">
+        <i class="bi bi-trophy-fill"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="custom-card stat-card border-start border-4 border-success">
+      <div class="stat-label">Training Speed Advantage</div>
+      <div class="stat-value text-success" id="cmpSpeedAdv">--</div>
+      <small class="text-muted" id="cmpSpeedRatio">FLOPs per step: 1x vs 4x</small>
+      <div class="stat-icon bg-success-subtle text-success">
+        <i class="bi bi-lightning-charge-fill"></i>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Formal Academic Comparison Table -->
+<div class="custom-card mb-4">
+  <div class="card-header-custom">
+    <h5 class="fw-bold mb-0">
+      <i class="bi bi-table me-2 text-primary"></i> Comprehensive Benchmark Metrics Table
+    </h5>
+    <span class="text-muted small">Values calculated from actual test evaluations</span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Evaluation Parameter</th>
+          <th>Simple RNN</th>
+          <th>LSTM</th>
+          <th>Difference / Delta</th>
+          <th>Superior Model</th>
+        </tr>
+      </thead>
+      <tbody id="comparisonTableBody">
+        <tr>
+          <td colspan="5" class="text-center text-muted py-4">
+            Loading comparative evaluation data...
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Comparison Charts Grid -->
+<div class="row g-4 mb-4">
+  <div class="col-md-6">
+    <div class="custom-card">
+      <div class="card-header-custom">
+        <h5 class="fw-bold mb-0">Metrics Breakdown (Bar Comparison)</h5>
+      </div>
+      <div style="height: 280px;">
+        <canvas id="chartMetricsComparison"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="custom-card">
+      <div class="card-header-custom">
+        <h5 class="fw-bold mb-0">Sequence Length vs. Accuracy Scaling</h5>
+        <small class="text-muted">Impact of sequence truncation (50-500 tokens)</small>
+      </div>
+      <div style="height: 280px;">
+        <canvas id="chartSeqLengthPerformance"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Empirical Findings and Discussion -->
+<div class="custom-card">
+  <div class="card-header-custom">
+    <h5 class="fw-bold mb-0">
+      <i class="bi bi-journal-bookmark-fill me-2 text-primary"></i> Academic Discussion &amp; Experimental Findings
+    </h5>
+  </div>
+  <div class="row g-3">
+    <div class="col-md-6">
+      <h6 class="fw-bold text-dark"><i class="bi bi-check-circle-fill text-success me-1"></i> Accuracy &amp; Generalization</h6>
+      <p class="small text-secondary" id="cmpNarrativeAcc">
+        Loading empirical results...
+      </p>
+
+      <h6 class="fw-bold text-dark mt-3"><i class="bi bi-stopwatch-fill text-warning me-1"></i> Computational Efficiency</h6>
+      <p class="small text-secondary" id="cmpNarrativeSpeed">
+        Loading empirical results...
+      </p>
+    </div>
+
+    <div class="col-md-6">
+      <h6 class="fw-bold text-dark"><i class="bi bi-bezier2 text-primary me-1"></i> Long-Term Information Retention</h6>
+      <p class="small text-secondary" id="cmpNarrativeDep">
+        Loading empirical results...
+      </p>
+
+      <h6 class="fw-bold text-dark mt-3"><i class="bi bi-exclamation-triangle-fill text-danger me-1"></i> Limitations of the Study</h6>
+      <p class="small text-secondary" id="cmpNarrativeLimit">
+        Loading empirical results...
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    loadComparisonData();
+    document.getElementById('btnRefreshComparison').addEventListener('click', loadComparisonData);
+  });
+
+  function loadComparisonData() {
+    fetch('/api/compare')
+      .then(res => res.json())
+      .then(resp => {
+        if(resp.status === 'success') {
+          const d = resp.data;
+          renderComparisonTable(d.comparison_table);
+          renderComparisonNarrative(d.narrative);
+
+          // Update summary cards
+          const rnnEval = d.rnn_evaluation;
+          const lstmEval = d.lstm_evaluation;
+
+          if(rnnEval) {
+            document.getElementById('cmpRnnAcc').textContent = (rnnEval.accuracy * 100).toFixed(2) + '%';
+            document.getElementById('cmpRnnF1').textContent = 'F1: ' + rnnEval.f1_score.toFixed(4);
+          }
+          if(lstmEval) {
+            document.getElementById('cmpLstmAcc').textContent = (lstmEval.accuracy * 100).toFixed(2) + '%';
+            document.getElementById('cmpLstmF1').textContent = 'F1: ' + lstmEval.f1_score.toFixed(4);
+          }
+
+          if(rnnEval && lstmEval) {
+            const diff = (lstmEval.accuracy - rnnEval.accuracy) * 100;
+            document.getElementById('cmpAccDelta').textContent = (diff >= 0 ? '+' : '') + diff.toFixed(2) + '%';
+            document.getElementById('cmpAccWinner').textContent = diff > 0 ? 'Leader: LSTM' : (diff < 0 ? 'Leader: Simple RNN' : 'Tie');
+
+            const speedAdv = (lstmEval.training_time_seconds / Math.max(rnnEval.training_time_seconds, 0.1)).toFixed(1);
+            document.getElementById('cmpSpeedAdv').textContent = 'RNN ' + speedAdv + 'x Faster';
+          }
+
+          renderComparisonBarChart(rnnEval, lstmEval);
+          renderSequenceScalingChart(d.sequence_length_scaling);
+        }
+      })
+      .catch(err => console.error("Comparison load error:", err));
+  }
+
+  function renderComparisonTable(rows) {
+    const tbody = document.getElementById('comparisonTableBody');
+    tbody.innerHTML = '';
+    if (!rows || rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">No evaluation data available. Please evaluate models first.</td></tr>';
+      return;
+    }
+
+    rows.forEach(r => {
+      let winnerBadge = '<span class="badge bg-light text-muted">Pending</span>';
+      if (r.winner === 'LSTM') winnerBadge = '<span class="badge bg-secondary-subtle text-secondary border border-secondary">LSTM</span>';
+      else if (r.winner === 'Simple RNN') winnerBadge = '<span class="badge bg-info-subtle text-info border border-info">Simple RNN</span>';
+      else if (r.winner === 'Tie') winnerBadge = '<span class="badge bg-light text-dark">Tie</span>';
+
+      tbody.innerHTML += `
+        <tr>
+          <td class="fw-semibold text-dark">${r.parameter}</td>
+          <td class="font-monospace">${r.rnn_display}</td>
+          <td class="font-monospace">${r.lstm_display}</td>
+          <td class="font-monospace text-muted">${r.difference !== null ? r.difference : '--'}</td>
+          <td>${winnerBadge}</td>
+        </tr>
+      `;
+    });
+  }
+
+  function renderComparisonNarrative(narrative) {
+    if(!narrative) return;
+    document.getElementById('cmpNarrativeAcc').textContent = narrative.accuracy_comparison || "--";
+    document.getElementById('cmpNarrativeSpeed').textContent = narrative.training_speed_comparison || "--";
+    document.getElementById('cmpNarrativeDep').textContent = narrative.long_dependency_comparison || "--";
+    document.getElementById('cmpNarrativeLimit').textContent = narrative.limitations || "--";
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Live Sentiment Analyzer | SentimentAI{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1">Live Sentiment Analyzer</h3>
+    <p class="text-muted mb-0">
+      Simultaneous real-time inference on arbitrary review text comparing Simple RNN and LSTM models.
+    </p>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- Input Card -->
+  <div class="col-lg-7">
+    <div class="custom-card h-100">
+      <div class="card-header-custom">
+        <h5 class="fw-bold mb-0">
+          <i class="bi bi-chat-left-quote-fill me-2 text-primary"></i> Input Text Review
+        </h5>
+        <div class="d-flex align-items-center gap-2">
+          <label class="small text-muted fw-semibold">Sequence Length:</label>
+          <select id="analyzerMaxLen" class="form-select form-select-sm" style="width: auto;">
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="250" selected>250 (Default)</option>
+            <option value="500">500</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <textarea id="analyzerTextInput" class="form-control" rows="5" placeholder="Enter or paste movie review here... e.g., 'The plot was intricate, but the acting was phenomenal.'">The movie was extraordinarily magnificent and phenomenal, although the remaining several hours consisted of slow scenes, ordinary cinematography, generic background noise, and unremarkable characters.</textarea>
+      </div>
+
+      <!-- Quick Preset Buttons -->
+      <div class="mb-3">
+        <strong class="small d-block text-muted mb-2">Academic Test Scenarios:</strong>
+        <div class="d-flex flex-wrap gap-2">
+          <button class="btn btn-outline-secondary btn-sm" onclick="setAnalyzerPreset('pos')">
+            <i class="bi bi-hand-thumbs-up-fill text-success"></i> Clear Positive
+          </button>
+          <button class="btn btn-outline-secondary btn-sm" onclick="setAnalyzerPreset('neg')">
+            <i class="bi bi-hand-thumbs-down-fill text-danger"></i> Clear Negative
+          </button>
+          <button class="btn btn-outline-primary btn-sm" onclick="setAnalyzerPreset('early_pos')">
+            <i class="bi bi-arrow-bar-left"></i> Early Sentiment
+          </button>
+          <button class="btn btn-outline-primary btn-sm" onclick="setAnalyzerPreset('late_pos')">
+            <i class="bi bi-arrow-bar-right"></i> Late Sentiment
+          </button>
+          <button class="btn btn-outline-warning btn-sm" onclick="setAnalyzerPreset('distant_neg')">
+            <i class="bi bi-exclamation-triangle-fill text-warning"></i> Long-Distance Negation
+          </button>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center">
+        <span class="small text-muted" id="charTokenCounter">0 characters</span>
+        <button class="btn btn-primary px-4" id="btnAnalyzeText">
+          <i class="bi bi-cpu-fill me-1"></i> Analyze Sentiment
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Real-Time Prediction Outcome Cards -->
+  <div class="col-lg-5">
+    <div class="custom-card h-100">
+      <div class="card-header-custom">
+        <h5 class="fw-bold mb-0">
+          <i class="bi bi-speedometer2 me-2 text-primary"></i> Dual Model Output
+        </h5>
+        <span class="badge bg-light text-muted border" id="evalTimestamp">Ready</span>
+      </div>
+
+      <!-- Simple RNN Result Block -->
+      <div class="p-3 border rounded mb-3 bg-white border-start border-4 border-info">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <h6 class="fw-bold mb-0 text-info">
+            <i class="bi bi-arrow-repeat me-1"></i> Simple RNN
+          </h6>
+          <span class="badge" id="badgeRnnSentiment">Pending</span>
+        </div>
+        <div class="d-flex justify-content-between small text-muted mb-1">
+          <span>Output Probability:</span>
+          <strong id="valRnnProb">--</strong>
+        </div>
+        <div class="confidence-bar mb-2">
+          <div class="bg-info h-100" id="barRnnConfidence" style="width: 0%;"></div>
+        </div>
+        <div class="d-flex justify-content-between text-muted" style="font-size: 0.75rem;">
+          <span>Confidence: <strong id="lblRnnConfidence">--</strong></span>
+          <span>Inference: <strong id="lblRnnLatency">--</strong></span>
+        </div>
+      </div>
+
+      <!-- LSTM Result Block -->
+      <div class="p-3 border rounded mb-3 bg-white border-start border-4 border-secondary">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <h6 class="fw-bold mb-0 text-secondary">
+            <i class="bi bi-memory me-1"></i> LSTM
+          </h6>
+          <span class="badge" id="badgeLstmSentiment">Pending</span>
+        </div>
+        <div class="d-flex justify-content-between small text-muted mb-1">
+          <span>Output Probability:</span>
+          <strong id="valLstmProb">--</strong>
+        </div>
+        <div class="confidence-bar mb-2">
+          <div class="bg-secondary h-100" id="barLstmConfidence" style="width: 0%;"></div>
+        </div>
+        <div class="d-flex justify-content-between text-muted" style="font-size: 0.75rem;">
+          <span>Confidence: <strong id="lblLstmConfidence">--</strong></span>
+          <span>Inference: <strong id="lblLstmLatency">--</strong></span>
+        </div>
+      </div>
+
+      <!-- Agreement / Disagreement Notice -->
+      <div id="modelsAgreementNotice" class="p-2 rounded bg-light border text-center small text-muted">
+        Click "Analyze Sentiment" to run inference on both models.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Token Sequence Inspector -->
+<div class="custom-card">
+  <div class="card-header-custom">
+    <h5 class="fw-bold mb-0">
+      <i class="bi bi-diagram-2-fill me-2 text-primary"></i> Sequence Token Inspector
+    </h5>
+    <small class="text-muted">Visualizes word tokens, vocabulary indices, and padding</small>
+  </div>
+  <div class="mb-3">
+    <strong class="d-block small text-dark mb-1">Lexical Tokens Extracted:</strong>
+    <div id="analyzerTokensContainer" class="p-2 border rounded bg-light" style="min-height: 60px;">
+      <span class="text-muted small">Tokens will be displayed here after analysis.</span>
+    </div>
+  </div>
+  <div class="alert alert-light border small text-muted mb-0">
+    <strong>Academic Confidence Disclaimer:</strong> The predicted probability represents the model's output after sigmoid activation (\( \sigma(z) \in [0.0, 1.0] \)), indicating the statistical confidence of the model based on its training distribution. It does not constitute a guaranteed human truth.
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/analyzer.js') }}"></script>
+{% endblock %}

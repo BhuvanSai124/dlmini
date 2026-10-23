@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+
+{% block title %}LSTM Model | SentimentAI{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1">Long Short-Term Memory Network (LSTM)</h3>
+    <p class="text-muted mb-0">
+      Advanced gated recurrence introducing Forget, Input, and Output gates with a Constant Error Carousel (CEC) cell state.
+    </p>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <span class="badge bg-secondary-subtle text-secondary border border-secondary px-3 py-2" id="badgeLstmStatus">
+      Checking model status...
+    </span>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- Left Column: Training Controls & Hyperparameters -->
+  <div class="col-lg-5">
+    <div class="custom-card h-100">
+      <div class="card-header-custom">
+        <h5 class="fw-bold mb-0 text-secondary">
+          <i class="bi bi-sliders me-2"></i> Hyperparameter Configuration
+        </h5>
+        <small class="text-muted">Directly Comparable to RNN</small>
+      </div>
+
+      <form id="formTrainLstm">
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Epochs:</label>
+            <input type="number" class="form-control form-control-sm" id="lstmEpochs" value="5" min="1" max="50">
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Batch Size:</label>
+            <input type="number" class="form-control form-control-sm" id="lstmBatchSize" value="64" min="16" max="256" step="16">
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Learning Rate:</label>
+            <input type="number" class="form-control form-control-sm" id="lstmLR" value="0.001" step="0.0005">
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Sequence Length:</label>
+            <select class="form-select form-select-sm" id="lstmSeqLen">
+              <option value="50">50 tokens</option>
+              <option value="100">100 tokens</option>
+              <option value="250" selected>250 tokens (Default)</option>
+              <option value="500">500 tokens</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Embedding Dim:</label>
+            <input type="number" class="form-control form-control-sm" id="lstmEmbedDim" value="64" min="16" max="256">
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">LSTM Units:</label>
+            <input type="number" class="form-control form-control-sm" id="lstmUnits" value="64" min="16" max="256">
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Dense Units (ReLU):</label>
+            <input type="number" class="form-control form-control-sm" id="lstmDenseUnits" value="32" min="8" max="128">
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold">Dropout Rate:</label>
+            <input type="number" class="form-control form-control-sm" id="lstmDropout" value="0.3" min="0.0" max="0.7" step="0.1">
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Dataset Source:</label>
+          <select class="form-select form-select-sm" id="lstmDatasetSource">
+            <option value="keras" selected>Option 1: TensorFlow Keras IMDB</option>
+            <option value="csv">Option 2: Local CSV (imdb_dataset.csv)</option>
+          </select>
+        </div>
+
+        <div class="d-grid gap-2">
+          <button type="submit" class="btn btn-secondary" id="btnStartLstmTrain">
+            <i class="bi bi-play-circle-fill me-1"></i> Start LSTM Training
+          </button>
+        </div>
+      </form>
+
+      <!-- Live Training Progress Bar -->
+      <div id="lstmProgressBox" class="mt-4 p-3 border rounded bg-light d-none">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <strong class="small" id="lstmProgressTitle">Training in Progress...</strong>
+          <span class="badge bg-secondary" id="lstmProgressPct">0%</span>
+        </div>
+        <div class="progress mb-2" style="height: 10px;">
+          <div class="progress-bar progress-bar-striped progress-bar-animated bg-secondary" id="lstmProgressBar" style="width: 0%;"></div>
+        </div>
+        <p class="small text-muted mb-0" id="lstmProgressMsg">Preparing dataset...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column: Architecture & Gating Breakdown -->
+  <div class="col-lg-7">
+    <div class="custom-card h-100">
+      <div class="card-header-custom">
+        <h5 class="fw-bold mb-0">
+          <i class="bi bi-cpu me-2 text-secondary"></i> Neural Architecture &amp; 4-Gate Parameter Analysis
+        </h5>
+        <span class="badge bg-light text-dark border">Param Total: ~675,233</span>
+      </div>
+
+      <div class="table-responsive mb-3">
+        <table class="table table-sm table-bordered align-middle small mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Layer #</th>
+              <th>Layer Name</th>
+              <th>Type</th>
+              <th>Output Shape</th>
+              <th>Activation</th>
+              <th>Parameters</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td><code>input_sequence</code></td>
+              <td>InputLayer</td>
+              <td>(None, 250)</td>
+              <td>None</td>
+              <td>0</td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td><code>word_embedding</code></td>
+              <td>Embedding</td>
+              <td>(None, 250, 64)</td>
+              <td>None</td>
+              <td>640,000</td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td><code>lstm_layer</code></td>
+              <td>LSTM (4 Gating Matrices)</td>
+              <td>(None, 64)</td>
+              <td>tanh &bull; sigmoid</td>
+              <td>33,024</td>
+            </tr>
+            <tr>
+              <td>4</td>
+              <td><code>lstm_dropout</code></td>
+              <td>Dropout (0.3)</td>
+              <td>(None, 64)</td>
+              <td>None</td>
+              <td>0</td>
+            </tr>
+            <tr>
+              <td>5</td>
+              <td><code>dense_features</code></td>
+              <td>Dense</td>
+              <td>(None, 32)</td>
+              <td>ReLU</td>
+              <td>2,080</td>
+            </tr>
+            <tr>
+              <td>6</td>
+              <td><code>sentiment_output</code></td>
+              <td>Dense</td>
+              <td>(None, 1)</td>
+              <td>Sigmoid</td>
+              <td>33</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="p-3 border rounded bg-light small">
+        <h6 class="fw-bold text-dark mb-2">The 4 Core Gated Operations:</h6>
+        <div class="row g-2 font-monospace text-secondary" style="font-size: 0.8rem;">
+          <div class="col-6"><strong>Forget Gate:</strong> f_t = &sigma;(W_f &bull; [h_{t-1}, x_t] + b_f)</div>
+          <div class="col-6"><strong>Input Gate:</strong> i_t = &sigma;(W_i &bull; [h_{t-1}, x_t] + b_i)</div>
+          <div class="col-6"><strong>Candidate State:</strong> C~_t = tanh(W_c &bull; [h_{t-1}, x_t] + b_c)</div>
+          <div class="col-6"><strong>Output Gate:</strong> o_t = &sigma;(W_o &bull; [h_{t-1}, x_t] + b_o)</div>
+          <div class="col-12 mt-2 pt-2 border-top text-dark font-monospace">
+            <strong>Cell State Update (Additive):</strong> C_t = f_t &odot; C_{t-1} + i_t &odot; C~_t
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Training Curves Section -->
+<div class="row g-4">
+  <div class="col-md-6">
+    <div class="custom-card">
+      <div class="card-header-custom">
+        <h5 class="fw-bold mb-0">Training &amp; Validation Accuracy</h5>
+      </div>
+      <div style="height: 280px;">
+        <canvas id="chartLstmAccuracy"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="custom-card">
+      <div class="card-header-custom">
+        <h5 class="fw-bold mb-0">Training &amp; Validation Loss</h5>
+      </div>
+      <div style="height: 280px;">
+        <canvas id="chartLstmLoss"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+  let lstmPoller = null;
+
+  document.addEventListener('DOMContentLoaded', function() {
+    checkLstmStatus();
+    loadLstmHistoryCharts();
+
+    document.getElementById('formTrainLstm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      startLstmTraining();
+    });
+  });
+
+  function checkLstmStatus() {
+    fetch('/api/models/status')
+      .then(res => res.json())
+      .then(data => {
+        const lstm = data.lstm;
+        const badge = document.getElementById('badgeLstmStatus');
+        if (lstm.trained) {
+          badge.className = 'badge bg-success-subtle text-success border border-success px-3 py-2';
+          badge.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Model Weights Saved &amp; Ready';
+        } else {
+          badge.className = 'badge bg-warning-subtle text-warning border border-warning px-3 py-2';
+          badge.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> Not Trained Yet';
+        }
+
+        if (data.active_training.status === 'training' && data.active_training.model_type === 'lstm') {
+          showProgressBox(data.active_training);
+          startPollingLstm();
+        }
+      });
+  }
+
+  function startLstmTraining() {
+    const payload = {
+      epochs: parseInt(document.getElementById('lstmEpochs').value),
+      batch_size: parseInt(document.getElementById('lstmBatchSize').value),
+      learning_rate: parseFloat(document.getElementById('lstmLR').value),
+      sequence_length: parseInt(document.getElementById('lstmSeqLen').value),
+      embedding_dim: parseInt(document.getElementById('lstmEmbedDim').value),
+      hidden_units: parseInt(document.getElementById('lstmUnits').value),
+      dense_units: parseInt(document.getElementById('lstmDenseUnits').value),
+      dropout_rate: parseFloat(document.getElementById('lstmDropout').value),
+      dataset_source: document.getElementById('lstmDatasetSource').value
+    };
+
+    fetch('/api/train/lstm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(resp => {
+      if (resp.status === 'accepted') {
+        document.getElementById('btnStartLstmTrain').disabled = true;
+        document.getElementById('lstmProgressBox').classList.remove('d-none');
+        startPollingLstm();
+      } else {
+        alert(resp.message || "Failed to start training.");
+      }
+    })
+    .catch(err => alert("Training request error: " + err));
+  }
+
+  function startPollingLstm() {
+    if (lstmPoller) clearInterval(lstmPoller);
+    lstmPoller = setInterval(() => {
+      fetch('/api/train/status')
+        .then(res => res.json())
+        .then(resp => {
+          const d = resp.data;
+          showProgressBox(d);
+          if (d.status === 'completed' || d.status === 'error' || d.status === 'idle') {
+            clearInterval(lstmPoller);
+            document.getElementById('btnStartLstmTrain').disabled = false;
+            checkLstmStatus();
+            loadLstmHistoryCharts();
+          }
+        });
+    }, 1500);
+  }
+
+  function showProgressBox(d) {
+    const box = document.getElementById('lstmProgressBox');
+    box.classList.remove('d-none');
+    document.getElementById('lstmProgressBar').style.width = d.progress_pct + '%';
+    document.getElementById('lstmProgressPct').textContent = d.progress_pct + '%';
+    document.getElementById('lstmProgressTitle').textContent = `Epoch ${d.current_epoch}/${d.total_epochs}`;
+    document.getElementById('lstmProgressMsg').textContent = d.message;
+  }
+
+  function loadLstmHistoryCharts() {
+    fetch('/api/training/history')
+      .then(res => res.json())
+      .then(resp => {
+        if (resp.data.lstm) {
+          renderModelHistoryCharts('Lstm', resp.data.lstm);
+        }
+      });
+  }
+</script>
+{% endblock %}

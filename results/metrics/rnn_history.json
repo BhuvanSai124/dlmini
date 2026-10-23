@@ -1,0 +1,28 @@
+{
+  "model_type": "rnn",
+  "training_time_seconds": 6.99,
+  "epochs_run": 3,
+  "epochs_configured": 3,
+  "batch_size": 128,
+  "sequence_length": 150,
+  "loss": [
+    0.69572,
+    0.6928,
+    0.67338
+  ],
+  "val_loss": [
+    0.69953,
+    0.6945,
+    0.70162
+  ],
+  "accuracy": [
+    0.5122,
+    0.517,
+    0.602
+  ],
+  "val_accuracy": [
+    0.498,
+    0.50067,
+    0.49733
+  ]
+}

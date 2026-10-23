@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | SentimentAI - RNN vs LSTM Analyzer{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1">Deep Learning Mini Project Dashboard</h3>
+    <p class="text-muted mb-0">
+      Sentiment Analysis Using Simple RNN and LSTM: A Comparative Study of Long-Term Dependency Learning
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-primary btn-sm" id="btnRefreshStatus">
+      <i class="bi bi-arrow-clockwise me-1"></i> Refresh Status
+    </button>
+  </div>
+</div>
+
+<!-- Project Problem Statement Banner -->
+<div class="alert alert-primary bg-primary-subtle border-primary-subtle d-flex align-items-center gap-3 p-3 rounded-3 mb-4">
+  <i class="bi bi-info-circle-fill text-primary fs-3"></i>
+  <div>
+    <strong>Academic Problem Statement:</strong>
+    "Implement an RNN and an LSTM on a text sequence dataset; compare their ability to capture long-term dependencies."
+    Both architectures are evaluated under identical data conditions on 50,000 IMDB movie reviews.
+  </div>
+</div>
+
+<!-- Key Stat Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="custom-card stat-card border-start border-4 border-primary">
+      <div class="stat-label">Total IMDB Reviews</div>
+      <div class="stat-value text-primary" id="statTotalReviews">50,000</div>
+      <small class="text-muted">20k Train &bull; 5k Val &bull; 25k Test</small>
+      <div class="stat-icon bg-primary-subtle text-primary">
+        <i class="bi bi-file-text-fill"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="custom-card stat-card border-start border-4 border-info">
+      <div class="stat-label">Simple RNN Status</div>
+      <div class="stat-value text-info" id="statRnnStatus">Checking...</div>
+      <small class="text-muted" id="statRnnAcc">Accuracy: Pending</small>
+      <div class="stat-icon bg-info-subtle text-info">
+        <i class="bi bi-arrow-repeat"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="custom-card stat-card border-start border-4 border-secondary">
+      <div class="stat-label">LSTM Status</div>
+      <div class="stat-value text-secondary" id="statLstmStatus">Checking...</div>
+      <small class="text-muted" id="statLstmAcc">Accuracy: Pending</small>
+      <div class="stat-icon bg-secondary-subtle text-secondary">
+        <i class="bi bi-memory"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="custom-card stat-card border-start border-4 border-success">
+      <div class="stat-label">Max Sequence Length</div>
+      <div class="stat-value text-success">250</div>
+      <small class="text-muted">Configurable: 50, 100, 250, 500</small>
+      <div class="stat-icon bg-success-subtle text-success">
+        <i class="bi bi-sliders"></i>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Architecture Side-by-Side Summary -->
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="custom-card h-100">
+      <div class="card-header-custom">
+        <h5 class="fw-bold mb-0 text-primary">
+          <i class="bi bi-arrow-repeat me-2"></i> Simple RNN Architecture
+        </h5>
+        <span class="badge bg-primary-subtle text-primary" id="badgeRnnTrained">Status</span>
+      </div>
+      <p class="text-muted small">
+        Standard Elman recurrence with hidden state updates. Subject to vanishing/exploding gradients over extended token timesteps.
+      </p>
+      <ul class="list-group list-group-flush small mb-3">
+        <li class="list-group-item d-flex justify-content-between">
+          <span>Input Sequence:</span> <strong>(batch_size, 250)</strong>
+        </li>
+        <li class="list-group-item d-flex justify-content-between">
+          <span>Embedding Layer:</span> <strong>Vocab 10,000 &rarr; Dim 64</strong>
+        </li>
+        <li class="list-group-item d-flex justify-content-between">
+          <span>Recurrent Layer:</span> <strong>SimpleRNN (64 units, tanh)</strong>
+        </li>
+        <li class="list-group-item d-flex justify-content-between">
+          <span>Regularization:</span> <strong>Dropout (0.3)</strong>
+        </li>
+        <li class="list-group-item d-flex justify-content-between">
+          <span>Dense Hidden:</span> <strong>32 units (ReLU)</strong>
+        </li>
+        <li class="list-group-item d-flex justify-content-between">
+          <span>Output Layer:</span> <strong>1 unit (Sigmoid)</strong>
+        </li>
+      </ul>
+      <div class="d-flex gap-2">
+        <a href="{{ url_for('page_rnn') }}" class="btn btn-outline-primary btn-sm w-100">
+          <i class="bi bi-gear-fill me-1"></i> Configure &amp; Train RNN
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="custom-card h-100">
+      <div class="card-header-custom">
+        <h5 class="fw-bold mb-0 text-secondary">
+          <i class="bi bi-memory me-2"></i> LSTM Architecture
+        </h5>
+        <span class="badge bg-secondary-subtle text-secondary" id="badgeLstmTrained">Status</span>
+      </div>
+      <p class="text-muted small">
+        Gated recurrent memory cells featuring Forget, Input, Output gates, and Constant Error Carousel (CEC) cell state.
+      </p>
+      <ul class="list-group list-group-flush small mb-3">
+        <li class="list-group-item d-flex justify-content-between">
+          <span>Input Sequence:</span> <strong>(batch_size, 250)</strong>
+        </li>
+        <li class="list-group-item d-flex justify-content-between">
+          <span>Embedding Layer:</span> <strong>Vocab 10,000 &rarr; Dim 64</strong>
+        </li>
+        <li class="list-group-item d-flex justify-content-between">
+          <span>Recurrent Layer:</span> <strong>LSTM (64 units, 3 Gates + CEC)</strong>
+        </li>
+        <li class="list-group-item d-flex justify-content-between">
+          <span>Regularization:</span> <strong>Dropout (0.3)</strong>
+        </li>
+        <li class="list-group-item d-flex justify-content-between">
+          <span>Dense Hidden:</span> <strong>32 units (ReLU)</strong>
+        </li>
+        <li class="list-group-item d-flex justify-content-between">
+          <span>Output Layer:</span> <strong>1 unit (Sigmoid)</strong>
+        </li>
+      </ul>
+      <div class="d-flex gap-2">
+        <a href="{{ url_for('page_lstm') }}" class="btn btn-outline-secondary btn-sm w-100">
+          <i class="bi bi-gear-fill me-1"></i> Configure &amp; Train LSTM
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Section -->
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="custom-card">
+      <div class="card-header-custom">
+        <h5 class="fw-bold mb-0">Validation Accuracy Comparison</h5>
+        <small class="text-muted">Epoch-by-epoch progress</small>
+      </div>
+      <div style="height: 280px;">
+        <canvas id="chartDashboardAccuracy"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="custom-card">
+      <div class="card-header-custom">
+        <h5 class="fw-bold mb-0">Validation Loss Comparison</h5>
+        <small class="text-muted">Binary crossentropy loss</small>
+      </div>
+      <div style="height: 280px;">
+        <canvas id="chartDashboardLoss"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Live Predictor Preview -->
+<div class="custom-card">
+  <div class="card-header-custom">
+    <h5 class="fw-bold mb-0">
+      <i class="bi bi-lightning-charge-fill text-warning me-2"></i> Quick Sentiment Analyzer
+    </h5>
+    <a href="{{ url_for('page_analyzer') }}" class="text-decoration-none small fw-semibold">
+      Open Full Interactive Analyzer <i class="bi bi-arrow-right"></i>
+    </a>
+  </div>
+  <div class="row g-3">
+    <div class="col-md-8">
+      <div class="mb-2">
+        <textarea id="dashboardQuickText" class="form-control" rows="2" placeholder="Enter movie review to test both models simultaneously..."></textarea>
+      </div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-primary btn-sm" id="btnDashboardPredict">
+          <i class="bi bi-send-fill me-1"></i> Classify Sentiment
+        </button>
+        <button class="btn btn-outline-secondary btn-sm" onclick="setDashboardSample(1)">Sample Positive</button>
+        <button class="btn btn-outline-secondary btn-sm" onclick="setDashboardSample(2)">Sample Negative</button>
+        <button class="btn btn-outline-secondary btn-sm" onclick="setDashboardSample(3)">Distant Negation</button>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div id="quickPredictionResult" class="p-3 border rounded bg-light text-center">
+        <span class="text-muted small">Enter text and click Classify Sentiment</span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    loadDashboardData();
+  });
+
+  function setDashboardSample(num) {
+    const samples = {
+      1: "The movie was absolutely fantastic! The acting was superb and the plot kept me engaged throughout.",
+      2: "A completely dreadful and boring film with terrible dialogue, wooden acting, and no redeeming qualities.",
+      3: "I can not in any good conscience after witnessing the amateurish dialogue, convoluted narrative, and confusing timeline say that this production was good."
+    };
+    document.getElementById('dashboardQuickText').value = samples[num] || "";
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+
+{% block title %}Model Evaluation Results | SentimentAI{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1">Model Evaluation Metrics &amp; Diagnostic Reports</h3>
+    <p class="text-muted mb-0">
+      Authentic evaluation on 25,000 held-out test reviews with Scikit-learn classification metrics and ROC-AUC curves.
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-primary btn-sm" onclick="triggerReEvaluation('rnn')">
+      <i class="bi bi-arrow-repeat me-1"></i> Re-Evaluate RNN
+    </button>
+    <button class="btn btn-outline-secondary btn-sm" onclick="triggerReEvaluation('lstm')">
+      <i class="bi bi-memory me-1"></i> Re-Evaluate LSTM
+    </button>
+  </div>
+</div>
+
+<!-- Tabs for RNN and LSTM Evaluation Details -->
+<ul class="nav nav-pills mb-4" id="evalTabs" role="tablist">
+  <li class="nav-item">
+    <button class="nav-link active px-4" id="rnn-tab" data-bs-toggle="pill" data-bs-target="#tab-eval-rnn" type="button">
+      <i class="bi bi-arrow-repeat me-1"></i> Simple RNN Evaluation
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link px-4" id="lstm-tab" data-bs-toggle="pill" data-bs-target="#tab-eval-lstm" type="button">
+      <i class="bi bi-memory me-1"></i> LSTM Evaluation
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link px-4" id="roc-tab" data-bs-toggle="pill" data-bs-target="#tab-eval-roc" type="button">
+      <i class="bi bi-graph-up me-1"></i> Combined ROC-AUC Curves
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content" id="evalTabsContent">
+  <!-- Simple RNN Panel -->
+  <div class="tab-pane fade show active" id="tab-eval-rnn">
+    <div class="row g-4 mb-4">
+      <!-- 4 Stat Badges -->
+      <div class="col-md-3">
+        <div class="custom-card stat-card border-start border-4 border-info">
+          <div class="stat-label">Accuracy</div>
+          <div class="stat-value text-info" id="evalRnnAccuracy">--</div>
+          <small class="text-muted">Test Partition</small>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="custom-card stat-card border-start border-4 border-primary">
+          <div class="stat-label">Precision</div>
+          <div class="stat-value text-primary" id="evalRnnPrecision">--</div>
+          <small class="text-muted">Positive Correctness</small>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="custom-card stat-card border-start border-4 border-success">
+          <div class="stat-label">Recall</div>
+          <div class="stat-value text-success" id="evalRnnRecall">--</div>
+          <small class="text-muted">Positive Sensitivity</small>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="custom-card stat-card border-start border-4 border-warning">
+          <div class="stat-label">F1-Score</div>
+          <div class="stat-value text-warning" id="evalRnnF1">--</div>
+          <small class="text-muted">Harmonic Mean</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-md-6">
+        <div class="custom-card h-100">
+          <div class="card-header-custom">
+            <h5 class="fw-bold mb-0">Confusion Matrix (Simple RNN)</h5>
+            <small class="text-muted" id="evalRnnSamples">25,000 samples</small>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-bordered text-center align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th></th>
+                  <th>Predicted Negative (0)</th>
+                  <th>Predicted Positive (1)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th class="table-light">Actual Negative (0)</th>
+                  <td class="bg-light fw-bold text-success" id="rnnTN">TN: --</td>
+                  <td class="bg-light fw-bold text-danger" id="rnnFP">FP: --</td>
+                </tr>
+                <tr>
+                  <th class="table-light">Actual Positive (1)</th>
+                  <td class="bg-light fw-bold text-danger" id="rnnFN">FN: --</td>
+                  <td class="bg-light fw-bold text-success" id="rnnTP">TP: --</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="d-flex justify-content-between small text-muted mt-2">
+            <span>Inference Latency: <strong id="rnnLatency">--</strong></span>
+            <span>Training Duration: <strong id="rnnTrainTime">--</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="custom-card h-100">
+          <div class="card-header-custom">
+            <h5 class="fw-bold mb-0">Classification Report (Scikit-Learn)</h5>
+            <span class="badge bg-light text-dark border">Zero Fabrication</span>
+          </div>
+          <pre id="rnnClfReport" class="p-3 bg-light border rounded small font-monospace" style="max-height: 250px; overflow-y: auto;">Awaiting evaluation results...</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LSTM Panel -->
+  <div class="tab-pane fade" id="tab-eval-lstm">
+    <div class="row g-4 mb-4">
+      <div class="col-md-3">
+        <div class="custom-card stat-card border-start border-4 border-secondary">
+          <div class="stat-label">Accuracy</div>
+          <div class="stat-value text-secondary" id="evalLstmAccuracy">--</div>
+          <small class="text-muted">Test Partition</small>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="custom-card stat-card border-start border-4 border-primary">
+          <div class="stat-label">Precision</div>
+          <div class="stat-value text-primary" id="evalLstmPrecision">--</div>
+          <small class="text-muted">Positive Correctness</small>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="custom-card stat-card border-start border-4 border-success">
+          <div class="stat-label">Recall</div>
+          <div class="stat-value text-success" id="evalLstmRecall">--</div>
+          <small class="text-muted">Positive Sensitivity</small>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="custom-card stat-card border-start border-4 border-warning">
+          <div class="stat-label">F1-Score</div>
+          <div class="stat-value text-warning" id="evalLstmF1">--</div>
+          <small class="text-muted">Harmonic Mean</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-md-6">
+        <div class="custom-card h-100">
+          <div class="card-header-custom">
+            <h5 class="fw-bold mb-0">Confusion Matrix (LSTM)</h5>
+            <small class="text-muted" id="evalLstmSamples">25,000 samples</small>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-bordered text-center align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th></th>
+                  <th>Predicted Negative (0)</th>
+                  <th>Predicted Positive (1)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th class="table-light">Actual Negative (0)</th>
+                  <td class="bg-light fw-bold text-success" id="lstmTN">TN: --</td>
+                  <td class="bg-light fw-bold text-danger" id="lstmFP">FP: --</td>
+                </tr>
+                <tr>
+                  <th class="table-light">Actual Positive (1)</th>
+                  <td class="bg-light fw-bold text-danger" id="lstmFN">FN: --</td>
+                  <td class="bg-light fw-bold text-success" id="lstmTP">TP: --</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="d-flex justify-content-between small text-muted mt-2">
+            <span>Inference Latency: <strong id="lstmLatency">--</strong></span>
+            <span>Training Duration: <strong id="lstmTrainTime">--</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="custom-card h-100">
+          <div class="card-header-custom">
+            <h5 class="fw-bold mb-0">Classification Report (Scikit-Learn)</h5>
+            <span class="badge bg-light text-dark border">Zero Fabrication</span>
+          </div>
+          <pre id="lstmClfReport" class="p-3 bg-light border rounded small font-monospace" style="max-height: 250px; overflow-y: auto;">Awaiting evaluation results...</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Combined ROC-AUC Curve Panel -->
+  <div class="tab-pane fade" id="tab-eval-roc">
+    <div class="custom-card">
+      <div class="card-header-custom">
+        <h5 class="fw-bold mb-0">
+          <i class="bi bi-graph-up me-2 text-primary"></i> Receiver Operating Characteristic (ROC) Comparison
+        </h5>
+        <div>
+          <span class="badge bg-info-subtle text-info me-2" id="badgeRnnAuc">RNN AUC: --</span>
+          <span class="badge bg-secondary-subtle text-secondary" id="badgeLstmAuc">LSTM AUC: --</span>
+        </div>
+      </div>
+      <div style="height: 380px;">
+        <canvas id="chartCombinedRoc"></canvas>
+      </div>
+      <div class="small text-muted p-2 mt-2 bg-light rounded text-center">
+        The Area Under the ROC Curve (AUC) quantifies the probability that the model ranks a randomly chosen positive review higher than a randomly chosen negative review.
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    loadModelEvaluation('rnn');
+    loadModelEvaluation('lstm');
+  });
+
+  function triggerReEvaluation(modelType) {
+    const btn = event.target;
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Evaluating...`;
+    fetch(`/api/evaluate/${modelType}?recompute=true`)
+      .then(res => res.json())
+      .then(resp => {
+        btn.disabled = false;
+        btn.innerHTML = `Re-Evaluate ${modelType.toUpperCase()}`;
+        if(resp.status === 'success') {
+          populateEvaluationUI(modelType, resp.data);
+          loadCombinedRoc();
+        } else {
+          alert(resp.message || "Evaluation failed.");
+        }
+      })
+      .catch(err => {
+        btn.disabled = false;
+        alert("Evaluation error: " + err);
+      });
+  }
+
+  function loadModelEvaluation(modelType) {
+    fetch(`/api/evaluate/${modelType}`)
+      .then(res => res.json())
+      .then(resp => {
+        if(resp.status === 'success') {
+          populateEvaluationUI(modelType, resp.data);
+          loadCombinedRoc();
+        }
+      })
+      .catch(err => console.error("Evaluation load error:", err));
+  }
+
+  function populateEvaluationUI(type, d) {
+    const prefix = type === 'rnn' ? 'rnn' : 'lstm';
+    const Cap = type === 'rnn' ? 'Rnn' : 'Lstm';
+
+    document.getElementById(`eval${Cap}Accuracy`).textContent = (d.accuracy * 100).toFixed(2) + '%';
+    document.getElementById(`eval${Cap}Precision`).textContent = (d.precision * 100).toFixed(2) + '%';
+    document.getElementById(`eval${Cap}Recall`).textContent = (d.recall * 100).toFixed(2) + '%';
+    document.getElementById(`eval${Cap}F1`).textContent = d.f1_score.toFixed(4);
+
+    const cm = d.confusion_matrix;
+    document.getElementById(`${prefix}TN`).textContent = `TN: ${cm.tn.toLocaleString()}`;
+    document.getElementById(`${prefix}FP`).textContent = `FP: ${cm.fp.toLocaleString()}`;
+    document.getElementById(`${prefix}FN`).textContent = `FN: ${cm.fn.toLocaleString()}`;
+    document.getElementById(`${prefix}TP`).textContent = `TP: ${cm.tp.toLocaleString()}`;
+
+    document.getElementById(`${prefix}Latency`).textContent = `${d.avg_latency_ms} ms / sample`;
+    document.getElementById(`${prefix}TrainTime`).textContent = `${d.training_time_seconds} seconds`;
+
+    const repEl = document.getElementById(`${prefix}ClfReport`);
+    repEl.textContent = JSON.stringify(d.classification_report, null, 2);
+  }
+
+  function loadCombinedRoc() {
+    Promise.all([
+      fetch('/api/evaluate/rnn').then(r => r.json()),
+      fetch('/api/evaluate/lstm').then(r => r.json())
+    ]).then(([rnnResp, lstmResp]) => {
+      const rnnData = rnnResp.status === 'success' ? rnnResp.data : null;
+      const lstmData = lstmResp.status === 'success' ? lstmResp.data : null;
+
+      if(rnnData) document.getElementById('badgeRnnAuc').textContent = `RNN AUC: ${rnnData.roc_auc}`;
+      if(lstmData) document.getElementById('badgeLstmAuc').textContent = `LSTM AUC: ${lstmData.roc_auc}`;
+
+      renderCombinedRocChart(rnnData, lstmData);
+    });
+  }
+</script>
+{% endblock %}

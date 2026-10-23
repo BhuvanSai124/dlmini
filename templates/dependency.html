@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+
+{% block title %}Long-Term Dependency Analysis | SentimentAI{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1">Long-Term Dependency Analysis &amp; Gradient Dynamics</h3>
+    <p class="text-muted mb-0">
+      Controlled empirical investigation comparing gradient retention and memory degradation across token distances.
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-primary btn-sm" id="btnRunDependencySuite">
+      <i class="bi bi-play-circle-fill me-1"></i> Re-Run Dependency Experiments
+    </button>
+  </div>
+</div>
+
+<!-- Theoretical Mathematical Comparison Card -->
+<div class="custom-card mb-4 border-start border-4 border-primary">
+  <div class="card-header-custom">
+    <h5 class="fw-bold mb-0 text-primary">
+      <i class="bi bi-mortarboard-fill me-2"></i> Mathematical Foundation: Why Simple RNN Struggles with Long Sequences
+    </h5>
+    <span class="badge bg-primary-subtle text-primary">Theoretical Rigor</span>
+  </div>
+  <div class="row g-4 small">
+    <div class="col-md-6 border-end">
+      <h6 class="fw-bold text-dark mb-1">Simple RNN: The Vanishing Gradient Problem</h6>
+      <p class="text-secondary mb-2">
+        In Simple RNN, state update is: \( h_t = \tanh(W_{hh} h_{t-1} + W_{xh} x_t) \).
+        During Backpropagation Through Time (BPTT), the gradient of loss \( L \) at step \( T \) with respect to hidden state \( h_1 \) is:
+      </p>
+      <div class="p-2 bg-light border rounded font-monospace text-center mb-2">
+        &part;L / &part;h_1 = (&part;L / &part;h_T) &times; &prod;_{k=2}^T (&part;h_k / &part;h_{k-1}) = (&part;L / &part;h_T) &times; &prod;_{k=2}^T [ \text{diag}(1 - \tanh^2(...)) &times; W_{hh}^T ]
+      </div>
+      <p class="text-muted mb-0">
+        Since \( \tanh' \le 1.0 \), if the eigenvalues of \( W_{hh} \) are less than 1, the gradient diminishes exponentially with sequence distance \( (T - 1) \). The network completely forgets sentiment cues occurring early in long text sequences.
+      </p>
+    </div>
+
+    <div class="col-md-6">
+      <h6 class="fw-bold text-dark mb-1">LSTM: The Constant Error Carousel (CEC) Solution</h6>
+      <p class="text-secondary mb-2">
+        LSTM decouples the hidden state from the memory conveyor via the additive Cell State \( C_t \):
+      </p>
+      <div class="p-2 bg-light border rounded font-monospace text-center mb-2">
+        C_t = f_t &odot; C_{t-1} + i_t &odot; \tilde{C}_t &emsp;&implies;&emsp; &part;C_t / &part;C_{t-1} = f_t
+      </div>
+      <p class="text-muted mb-0">
+        When the Forget Gate \( f_t \approx 1.0 \), the error gradient propagates backward across hundreds of time steps with <strong>zero exponential decay</strong>. This allows the model to preserve early sentiment and resolve distant negations.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Academic Disclaimer -->
+<div class="alert alert-warning d-flex align-items-center gap-2 p-3 rounded-3 mb-4">
+  <i class="bi bi-shield-exclamation fs-4 text-warning"></i>
+  <div class="small">
+    <strong>Academic Methodology Notice:</strong> The test cases below are <em>controlled synthetic diagnostic probes</em> designed to systematically evaluate token positioning and negation separation. They are strictly distinguished from natural IMDB reviews.
+  </div>
+</div>
+
+<!-- Experiment 2: Early Sentiment Information -->
+<div class="custom-card mb-4">
+  <div class="card-header-custom">
+    <div>
+      <span class="badge bg-primary mb-1">Experiment 2</span>
+      <h5 class="fw-bold mb-0">Early Sentiment Information Retention</h5>
+    </div>
+    <span class="text-muted small">Key sentiment words placed at beginning followed by 20+ neutral words</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-bordered align-middle small mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Probe ID</th>
+          <th>Scenario</th>
+          <th>Controlled Sentence</th>
+          <th>Key Cue Position</th>
+          <th>Expected</th>
+          <th>Simple RNN Output</th>
+          <th>LSTM Output</th>
+        </tr>
+      </thead>
+      <tbody id="earlySentimentTableBody">
+        <tr>
+          <td colspan="7" class="text-center text-muted py-3">Running experiment...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Experiment 3: Late Sentiment Information -->
+<div class="custom-card mb-4">
+  <div class="card-header-custom">
+    <div>
+      <span class="badge bg-secondary mb-1">Experiment 3</span>
+      <h5 class="fw-bold mb-0">Late Sentiment Information Retention</h5>
+    </div>
+    <span class="text-muted small">Key sentiment words placed at the final tail following 20+ neutral filler words</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-bordered align-middle small mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Probe ID</th>
+          <th>Scenario</th>
+          <th>Controlled Sentence</th>
+          <th>Key Cue Position</th>
+          <th>Expected</th>
+          <th>Simple RNN Output</th>
+          <th>LSTM Output</th>
+        </tr>
+      </thead>
+      <tbody id="lateSentimentTableBody">
+        <tr>
+          <td colspan="7" class="text-center text-muted py-3">Running experiment...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Experiment 4: Long-Distance Negation -->
+<div class="custom-card mb-4">
+  <div class="card-header-custom">
+    <div>
+      <span class="badge bg-danger mb-1">Experiment 4</span>
+      <h5 class="fw-bold mb-0">Long-Distance Negation Resolution</h5>
+    </div>
+    <span class="text-muted small">Negation word separated from sentiment-bearing word by intervening clauses</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-sm table-bordered align-middle small mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Probe ID</th>
+          <th>Scenario</th>
+          <th>Controlled Sentence</th>
+          <th>Negation Distance</th>
+          <th>Expected</th>
+          <th>Simple RNN Output</th>
+          <th>LSTM Output</th>
+        </tr>
+      </thead>
+      <tbody id="longNegationTableBody">
+        <tr>
+          <td colspan="7" class="text-center text-muted py-3">Running experiment...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Experiment 5: Distance Gap Scan Chart & Table -->
+<div class="custom-card">
+  <div class="card-header-custom">
+    <div>
+      <span class="badge bg-success mb-1">Experiment 5</span>
+      <h5 class="fw-bold mb-0">Systematic Distance Gap Scan: Memory Degradation Curve</h5>
+    </div>
+    <span class="text-muted small">Template: "This was not a [N filler words] good film"</span>
+  </div>
+
+  <div class="row g-4 align-items-center">
+    <div class="col-lg-7">
+      <div style="height: 280px;">
+        <canvas id="chartDistanceScan"></canvas>
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="table-responsive">
+        <table class="table table-sm table-bordered small mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Token Distance</th>
+              <th>Simple RNN Prob</th>
+              <th>LSTM Prob</th>
+            </tr>
+          </thead>
+          <tbody id="scanTableBody">
+            <tr>
+              <td colspan="3" class="text-center text-muted py-3">Loading distance scan data...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="p-2 bg-light border rounded mt-3 small text-muted">
+        <strong>Observation:</strong> As token distance between "not" and "good" increases, Simple RNN's probability climbs toward positive (degradation), whereas LSTM maintains low probability due to cell state preservation.
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    loadDependencyResults();
+    document.getElementById('btnRunDependencySuite').addEventListener('click', function() {
+      loadDependencyResults(true);
+    });
+  });
+
+  function loadDependencyResults(recompute = false) {
+    const url = '/api/long-dependency/results' + (recompute ? '?recompute=true' : '');
+    fetch(url)
+      .then(res => res.json())
+      .then(resp => {
+        if(resp.status === 'success' && resp.data.early_sentiment_results) {
+          const d = resp.data;
+          renderEarlyLateTable('earlySentimentTableBody', d.early_sentiment_results);
+          renderEarlyLateTable('lateSentimentTableBody', d.late_sentiment_results);
+          renderNegationTable('longNegationTableBody', d.long_distance_negation_results);
+          renderDistanceScan(d.distance_scan_results);
+        } else {
+          document.getElementById('earlySentimentTableBody').innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Please train RNN and LSTM models first to run real dependency evaluations.</td></tr>';
+          document.getElementById('lateSentimentTableBody').innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Please train RNN and LSTM models first.</td></tr>';
+          document.getElementById('longNegationTableBody').innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Please train RNN and LSTM models first.</td></tr>';
+        }
+      })
+      .catch(err => console.error("Dependency suite error:", err));
+  }
+
+  function renderEarlyLateTable(tbodyId, items) {
+    const tbody = document.getElementById(tbodyId);
+    tbody.innerHTML = '';
+    (items || []).forEach(it => {
+      const rnnBadge = it.rnn_sentiment === 'Positive' ? 'bg-success' : (it.rnn_sentiment === 'Negative' ? 'bg-danger' : 'bg-secondary');
+      const lstmBadge = it.lstm_sentiment === 'Positive' ? 'bg-success' : (it.lstm_sentiment === 'Negative' ? 'bg-danger' : 'bg-secondary');
+
+      tbody.innerHTML += `
+        <tr>
+          <td><span class="badge bg-light text-dark border">${it.id}</span></td>
+          <td class="fw-semibold">${it.type}</td>
+          <td class="text-muted" style="max-width: 320px;">${it.text}</td>
+          <td><small>${it.key_cue_position}</small></td>
+          <td><strong class="text-primary">${it.expected_sentiment}</strong></td>
+          <td>
+            <span class="badge ${rnnBadge}">${it.rnn_sentiment}</span>
+            <small class="d-block text-muted">p=${it.rnn_prob !== null ? it.rnn_prob : '--'}</small>
+          </td>
+          <td>
+            <span class="badge ${lstmBadge}">${it.lstm_sentiment}</span>
+            <small class="d-block text-muted">p=${it.lstm_prob !== null ? it.lstm_prob : '--'}</small>
+          </td>
+        </tr>
+      `;
+    });
+  }
+
+  function renderNegationTable(tbodyId, items) {
+    const tbody = document.getElementById(tbodyId);
+    tbody.innerHTML = '';
+    (items || []).forEach(it => {
+      const rnnBadge = it.rnn_sentiment === 'Positive' ? 'bg-success' : (it.rnn_sentiment === 'Negative' ? 'bg-danger' : 'bg-secondary');
+      const lstmBadge = it.lstm_sentiment === 'Positive' ? 'bg-success' : (it.lstm_sentiment === 'Negative' ? 'bg-danger' : 'bg-secondary');
+
+      tbody.innerHTML += `
+        <tr>
+          <td><span class="badge bg-light text-dark border">${it.id}</span></td>
+          <td class="fw-semibold">${it.type}</td>
+          <td class="text-muted" style="max-width: 320px;">${it.text}</td>
+          <td><span class="badge bg-warning-subtle text-dark border border-warning">${it.distance_tokens} tokens</span></td>
+          <td><strong class="text-danger">${it.expected_sentiment}</strong></td>
+          <td>
+            <span class="badge ${rnnBadge}">${it.rnn_sentiment}</span>
+            <small class="d-block text-muted">p=${it.rnn_prob !== null ? it.rnn_prob : '--'}</small>
+          </td>
+          <td>
+            <span class="badge ${lstmBadge}">${it.lstm_sentiment}</span>
+            <small class="d-block text-muted">p=${it.lstm_prob !== null ? it.lstm_prob : '--'}</small>
+          </td>
+        </tr>
+      `;
+    });
+  }
+
+  function renderDistanceScan(scanList) {
+    const tbody = document.getElementById('scanTableBody');
+    tbody.innerHTML = '';
+    if (!scanList) return;
+
+    scanList.forEach(s => {
+      tbody.innerHTML += `
+        <tr>
+          <td><strong>${s.token_distance} tokens</strong></td>
+          <td class="font-monospace">${s.rnn_prob !== null ? s.rnn_prob : '--'}</td>
+          <td class="font-monospace">${s.lstm_prob !== null ? s.lstm_prob : '--'}</td>
+        </tr>
+      `;
+    });
+
+    renderDistanceScanChart(scanList);
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,28 @@
+{
+  "model_type": "lstm",
+  "training_time_seconds": 20.29,
+  "epochs_run": 3,
+  "epochs_configured": 3,
+  "batch_size": 128,
+  "sequence_length": 150,
+  "loss": [
+    0.69268,
+    0.67317,
+    0.51148
+  ],
+  "val_loss": [
+    0.69418,
+    0.5769,
+    0.47814
+  ],
+  "accuracy": [
+    0.514,
+    0.6088,
+    0.7832
+  ],
+  "val_accuracy": [
+    0.51533,
+    0.74667,
+    0.788
+  ]
+}

@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}Text Preprocessing Pipeline | SentimentAI{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1">NLP Text Preprocessing Pipeline</h3>
+    <p class="text-muted mb-0">
+      Multi-stage sequence transformation pipeline from raw natural language strings to padded numerical tensor representations.
+    </p>
+  </div>
+</div>
+
+<!-- Architecture Pipeline Steps Flowchart -->
+<div class="custom-card mb-4">
+  <div class="card-header-custom">
+    <h5 class="fw-bold mb-0">
+      <i class="bi bi-diagram-3-fill me-2 text-primary"></i> 6-Stage End-to-End NLP Transformation Flow
+    </h5>
+  </div>
+  <div class="row g-2 text-center small">
+    <div class="col-md-2">
+      <div class="p-3 border rounded bg-white h-100 shadow-sm border-top border-4 border-primary">
+        <span class="badge bg-primary mb-2">Step 1</span>
+        <h6 class="fw-bold mb-1">Text Cleaning</h6>
+        <p class="text-muted mb-0" style="font-size: 0.75rem;">Lowercase, strip HTML, expand contractions, <strong>retain negations</strong>.</p>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="p-3 border rounded bg-white h-100 shadow-sm border-top border-4 border-info">
+        <span class="badge bg-info mb-2">Step 2</span>
+        <h6 class="fw-bold mb-1">Tokenization</h6>
+        <p class="text-muted mb-0" style="font-size: 0.75rem;">Split sentences into discrete lexical word tokens.</p>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="p-3 border rounded bg-white h-100 shadow-sm border-top border-4 border-warning">
+        <span class="badge bg-warning text-dark mb-2">Step 3</span>
+        <h6 class="fw-bold mb-1">Vocabulary Index</h6>
+        <p class="text-muted mb-0" style="font-size: 0.75rem;">Top 10,000 words fitted <em>strictly</em> on training set (No Leakage).</p>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="p-3 border rounded bg-white h-100 shadow-sm border-top border-4 border-secondary">
+        <span class="badge bg-secondary mb-2">Step 4</span>
+        <h6 class="fw-bold mb-1">Integer Encoding</h6>
+        <p class="text-muted mb-0" style="font-size: 0.75rem;">Map tokens to IDs. Out-of-vocabulary mapped to &lt;OOV&gt; (Index 1).</p>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="p-3 border rounded bg-white h-100 shadow-sm border-top border-4 border-success">
+        <span class="badge bg-success mb-2">Step 5</span>
+        <h6 class="fw-bold mb-1">Sequence Padding</h6>
+        <p class="text-muted mb-0" style="font-size: 0.75rem;">Post-pad with 0 to length 250 (options 50, 100, 250, 500).</p>
+      </div>
+    </div>
+    <div class="col-md-2">
+      <div class="p-3 border rounded bg-white h-100 shadow-sm border-top border-4 border-danger">
+        <span class="badge bg-danger mb-2">Step 6</span>
+        <h6 class="fw-bold mb-1">Batch Tensors</h6>
+        <p class="text-muted mb-0" style="font-size: 0.75rem;">(batch_size, 250) fed identically to Simple RNN and LSTM.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Interactive Preprocessing Sandbox -->
+<div class="custom-card mb-4">
+  <div class="card-header-custom">
+    <h5 class="fw-bold mb-0">
+      <i class="bi bi-braces-asterisk me-2 text-primary"></i> Interactive Preprocessing Playground
+    </h5>
+    <div class="d-flex align-items-center gap-2">
+      <label class="small text-muted fw-semibold">Target Sequence Length:</label>
+      <select id="prepMaxLen" class="form-select form-select-sm" style="width: auto;">
+        <option value="50">50 tokens</option>
+        <option value="100">100 tokens</option>
+        <option value="250" selected>250 tokens (Default)</option>
+        <option value="500">500 tokens</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label fw-semibold small">Enter Raw Text Review (HTML tags &amp; negations allowed):</label>
+    <textarea id="prepInputText" class="form-control" rows="3" placeholder="Type or paste any text review here...">The movie was <br /><br /> NOT really good, but the visuals were great!</textarea>
+  </div>
+
+  <div class="d-flex gap-2 mb-4">
+    <button class="btn btn-primary btn-sm" id="btnRunPreprocessing">
+      <i class="bi bi-gear-wide-connected me-1"></i> Execute Preprocessing
+    </button>
+    <button class="btn btn-outline-secondary btn-sm" onclick="setPrepSample(1)">Sample with HTML &amp; Negation</button>
+    <button class="btn btn-outline-secondary btn-sm" onclick="setPrepSample(2)">Sample Complex Reversal</button>
+  </div>
+
+  <!-- Live Output Transformation Boxes -->
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="p-3 border rounded bg-light h-100">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="fw-bold mb-0 text-secondary">Stage 1: Cleaned Text &amp; Token Breakdown</h6>
+          <span class="badge bg-secondary" id="lblTokenCount">0 tokens</span>
+        </div>
+        <p class="small text-muted mb-1" id="lblCleanedText">Awaiting execution...</p>
+        <div class="mt-3">
+          <strong class="d-block small text-dark mb-1">Lexical Tokens (Red = Negation Word, Yellow = OOV):</strong>
+          <div id="tokensBadgeContainer" class="p-2 border rounded bg-white" style="min-height: 80px;">
+            <span class="text-muted small">Tokens will be rendered here...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="p-3 border rounded bg-light h-100">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="fw-bold mb-0 text-secondary">Stage 2: Integer Sequence &amp; Padding</h6>
+          <span class="badge bg-primary" id="lblPadLength">Length: 0</span>
+        </div>
+        <div class="mb-2">
+          <strong class="small text-dark">Raw Word-to-Integer Sequence:</strong>
+          <pre id="rawSeqDisplay" class="p-2 bg-white border rounded small mb-0" style="max-height: 80px; overflow-y: auto;">[]</pre>
+        </div>
+        <div>
+          <strong class="small text-dark">Padded / Truncated Input Tensor (shape: [1, max_len]):</strong>
+          <pre id="padSeqDisplay" class="p-2 bg-white border rounded small mb-0 font-monospace" style="max-height: 100px; overflow-y: auto;">[]</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Crucial Rule: Negation Preservation Documentation -->
+<div class="custom-card border-start border-4 border-danger">
+  <h5 class="fw-bold text-danger mb-2">
+    <i class="bi bi-shield-exclamation me-2"></i> Critical Academic Design Rule: Preserving Negations
+  </h5>
+  <p class="small text-secondary mb-2">
+    In standard NLP text preprocessing, naive stopword removal libraries (e.g. default NLTK lists) blindly purge words such as <code>"not"</code>, <code>"no"</code>, <code>"never"</code>, and <code>"neither"</code>. 
+    In sentiment analysis, stripping negation words causes catastrophic semantic inversion:
+  </p>
+  <div class="table-responsive">
+    <table class="table table-sm table-bordered bg-white small mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Original Sentence</th>
+          <th>Naive Preprocessing (Flawed)</th>
+          <th>SentimentAI Pipeline (Correct)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>"The acting was <strong>not</strong> good."</td>
+          <td class="text-danger">"acting good" &rarr; <span class="badge bg-success">Predicts Positive (Inverted!)</span></td>
+          <td class="text-success">"acting <strong>not</strong> good" &rarr; <span class="badge bg-danger">Predicts Negative (Preserved)</span></td>
+        </tr>
+        <tr>
+          <td>"I could <strong>never</strong> recommend this movie."</td>
+          <td class="text-danger">"could recommend movie" &rarr; <span class="badge bg-success">Predicts Positive (Inverted!)</span></td>
+          <td class="text-success">"could <strong>never</strong> recommend movie" &rarr; <span class="badge bg-danger">Predicts Negative (Preserved)</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('btnRunPreprocessing').addEventListener('click', runPreprocessingTest);
+    runPreprocessingTest();
+  });
+
+  const negationSet = new Set(["not", "no", "never", "neither", "nor", "none", "cannot", "cant", "wont", "dont", "didnt", "isnt", "arent", "wasnt", "werent", "hasnt", "havent", "hadnt", "couldnt", "shouldnt", "wouldnt", "hardly", "scarcely", "barely"]);
+
+  function setPrepSample(idx) {
+    if (idx === 1) {
+      document.getElementById('prepInputText').value = "The movie was <br /><br /> NOT really good, but the visuals were great!";
+    } else {
+      document.getElementById('prepInputText').value = "I initially thought it was amazing, but after two hours, I would definitely not describe it as good.";
+    }
+    runPreprocessingTest();
+  }
+
+  function runPreprocessingTest() {
+    const text = document.getElementById('prepInputText').value;
+    const maxLen = document.getElementById('prepMaxLen').value;
+
+    fetch('/api/preprocess', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: text, max_length: parseInt(maxLen) })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if(data.status === 'success') {
+        document.getElementById('lblTokenCount').textContent = data.token_count + ' tokens';
+        document.getElementById('lblCleanedText').innerHTML = `<strong>Cleaned:</strong> ${data.cleaned_text}`;
+        document.getElementById('lblPadLength').textContent = 'Padded Shape: (1, ' + data.sequence_length + ')';
+
+        // Render tokens
+        const container = document.getElementById('tokensBadgeContainer');
+        container.innerHTML = '';
+        data.tokens.forEach(tok => {
+          const isNeg = negationSet.has(tok.toLowerCase());
+          const badgeClass = isNeg ? 'token-badge negation' : 'token-badge';
+          container.innerHTML += `<span class="${badgeClass}">${tok}</span>`;
+        });
+
+        document.getElementById('rawSeqDisplay').textContent = JSON.stringify(data.sequence);
+        document.getElementById('padSeqDisplay').textContent = JSON.stringify(data.padded_sequence.slice(0, 35)) + (data.padded_sequence.length > 35 ? ' ... [zeros]' : '');
+      }
+    })
+    .catch(err => console.error("Preprocessing error:", err));
+  }
+</script>
+{% endblock %}
